@@ -1,8 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::hash_map::Entry;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
-use std::ops::{Add, AddAssign, Sub, SubAssign};
 use std::sync::Arc;
 
 fn main() {
@@ -73,64 +72,13 @@ struct FuelCalculator<'a> {
 }
 
 impl<'a> FuelCalculator<'a> {
-  //  fn calculate_fuel_for_1_trillion_ore(&mut self) -> u64 {
-  //    self.available.clear();
-  //    let mut ore_per_fuel = Vec::with_capacity(10000);
-  //    let mut ore_used = 0;
-  //    let num_to_check = 50;
-  //    let mut continue_from = loop {
-  //      let ore_for_fuel = self.calculate_ore_for_fuel();
-  //      ore_per_fuel.push(ore_for_fuel);
-  //      let len = ore_per_fuel.len();
-  //      if len > num_to_check + 1 {
-  //        if ore_per_fuel[0..num_to_check] == ore_per_fuel[len - num_to_check..len] {
-  //          break 0;
-  //        }
-  //      }
-  //      if len == 5000 {
-  //        let total_ore = ore_per_fuel.iter().sum::<u64>();
-  //        let partial = 1_000_000_000_000.0_f64 / total_ore as f64;
-  //        println!(
-  //          "total_ore = {}, partial = {}, return = {}, previous = 3281755 (too low)",
-  //          total_ore,
-  //          partial,
-  //          partial * len as f64
-  //        );
-  //        return (partial * len as f64) as u64;
-  //      }
-  //      if len % 100 == 0 {
-  //        ore_used += ore_per_fuel[len - 100..len].iter().sum::<u64>();
-  //        println!(
-  //          "Running loop: {}, ore_used: {},  {:?}",
-  //          len,
-  //          ore_used,
-  //          &ore_per_fuel[len - 100..len]
-  //        );
-  //      }
-  //    };
-  //    //println!("{}, {:#?}", ore_per_fuel.len(), ore_per_fuel);
-  //    let ore_per_loop = ore_per_fuel[..ore_per_fuel.len() - num_to_check]
-  //      .iter()
-  //      .sum::<u64>();
-  //    let loops = 1_000_000_000_000 / ore_per_loop;
-  //    let mut fuel = (ore_per_fuel.len() - num_to_check) as u64 * loops;
-  //    let mut leftover = (1_000_000_000_000 - (ore_per_loop * loops)) as i64;
-  //    while leftover >= 0 {
-  //      let ore_per_fuel = ore_per_fuel[continue_from];
-  //      leftover -= ore_per_fuel as i64;
-  //      fuel += 1;
-  //      continue_from += 1;
-  //    }
-  //    fuel - 1
-  //  }
   fn calculate_fuel_for_1_trillion_ore(&mut self) -> u64 {
     const TRILLION: u64 = 1_000_000_000_000;
     let ore = self.calculate_ore_for_fuel(10);
     let mut min = TRILLION / (ore * 100);
     let mut max = TRILLION / (ore / 100);
-    let mut iter = 0;
     while min + 1 != max {
-      println!("min: {}, max: {}, iter: {}", min, max, iter);
+      //println!("min: {}, max: {}", min, max);
       let mid = (min + max) / 2;
       let ore = self.calculate_ore_for_fuel(mid);
       if ore < TRILLION {
@@ -138,7 +86,6 @@ impl<'a> FuelCalculator<'a> {
       } else {
         max = mid;
       }
-      iter += 1;
     }
     min
   }
@@ -150,14 +97,15 @@ impl<'a> FuelCalculator<'a> {
     });
     needed
   }
+
   fn calculate_recipe_for_chemical_unit(&mut self, needed: &ChemicalUnit<'a>) -> u64 {
     if needed.is_ore() {
       //println!("returning {} ore units", needed.units);
       return needed.units;
     }
     let available = match self.available.entry(needed.name) {
-      Entry::Occupied(mut o) => *o.get(),
-      Entry::Vacant(mut v) => 0,
+      Entry::Occupied(o) => *o.get(),
+      Entry::Vacant(_) => 0,
     };
     let map_clone = self.map.clone();
     let mut recipe_units = 0;
@@ -180,7 +128,7 @@ impl<'a> FuelCalculator<'a> {
         Entry::Occupied(mut o) => {
           *o.get_mut() = recipe_units + available - needed.units;
         }
-        Entry::Vacant(mut v) => {
+        Entry::Vacant(v) => {
           v.insert(recipe_units + available - needed.units);
         }
       }
